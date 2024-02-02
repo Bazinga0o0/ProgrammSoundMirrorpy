@@ -37,14 +37,11 @@ device = input_device_id
 samplerate = 44100 
 channels = 2
 
-# Create a tkinter window
 root = tk.Tk()
 root.title("Streaming Sound")
 
-# Add a label to the window
 label = tk.Label(root, text=f"Stream gestartet, fenster schließen um zu beenden. Geräte: {device}")
 label.pack()
 
-# Start the stream when the window is opened
 with sd.Stream(callback=stream_callback, samplerate=samplerate, channels=channels, device=device):
     root.mainloop()
