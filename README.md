@@ -1,0 +1,2 @@
+Ermöglicht es bestimmte Audioinputs zu kombinieren und beispielsweise auf Discord zu streamen und hat zusätzlich die Möglichkeit auch den Desktop oder beliebige Fenster zu streamen.
+Zunächst vb-cable installieren. Dann als Output der Anwendung die man streamen möchte CABLE wählen und dann main ausführen. Unter Umständen muss die Geräteauswahl für den output angepasst werden (ich arbeite noch an der korrekten automatischen auswahl). allsteam.py kann Anwendungen mit Bild und Ton streamen. main.py nur für Ton.
