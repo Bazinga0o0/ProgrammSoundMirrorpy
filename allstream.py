@@ -85,18 +85,13 @@ class BITMAPINFO(ctypes.Structure):
 def capture_window(hwnd, fs):
     
     # Get window dimensions
-    if fs:
-        width = win32api.GetSystemMetrics(0)
-        height = win32api.GetSystemMetrics(1)
-    else:
-        rect = win32gui.GetWindowRect(hwnd)
-        left, top, right, bot = rect
-        width = right - left
-        height = bot - top
+    rect = win32gui.GetWindowRect(hwnd)
+    left, top, right, bot = rect
+    width = right - left
+    height = bot - top
 
     # Window
-    if not fs:
-        window_dc = win32gui.GetWindowDC(hwnd)
+    window_dc = win32gui.GetWindowDC(hwnd)
     mfc_dc = win32ui.CreateDCFromHandle(window_dc)
     save_dc = mfc_dc.CreateCompatibleDC()
 
@@ -105,14 +100,10 @@ def capture_window(hwnd, fs):
     save_bitmap.CreateCompatibleBitmap(mfc_dc, width, height)
     save_dc.SelectObject(save_bitmap)
 
-    # Capture window
-    if fs:
-        result = save_dc.BitBlt((0, 0), (width, height), mfc_dc, (0, 0), SRCCOPY)
-    else:
-        result = ctypes.windll.user32.PrintWindow(hwnd, save_dc.GetSafeHdc(), PW_RENDERFULLCONTENT)
+    result = ctypes.windll.user32.PrintWindow(hwnd, save_dc.GetSafeHdc(), PW_RENDERFULLCONTENT)
 
     if result == 1:
-        # Convert to PIL Image
+
         bmpinfo = save_bitmap.GetInfo()
         bmpstr = save_bitmap.GetBitmapBits(True)
         img = Image.frombuffer('RGB', (bmpinfo['bmWidth'], bmpinfo['bmHeight']), bmpstr, 'raw', 'BGRX', 0, 1)
@@ -122,35 +113,51 @@ def capture_window(hwnd, fs):
     win32gui.DeleteObject(save_bitmap.GetHandle())
     save_dc.DeleteDC()
     mfc_dc.DeleteDC()
-    if not fs:
-        win32gui.ReleaseDC(hwnd, window_dc)
+    win32gui.ReleaseDC(hwnd, window_dc)
 
     return img
 
 
 with sd.Stream(callback=stream_callback, samplerate=samplerate, channels=channels, device=device):
-    while True:
-        start_time = time.time()
-        try:
-            if app_name == "f":
-                frame = capture_window(None, True)
+    start_time = time.time()
+    if app_name == "f":
+        camera = dxcam.create(output_color="RGB")
+        camera.start(target_fps=FPS, video_mode=True)
+        while True:
+            try:
+                frame = camera.get_latest_frame()
                 frame = np.array(frame)
                 frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
                 cv2.imshow("frame", frame)
-            else:
-                window = gw.getWindowsWithTitle(app_name)[0]
-                if window:
-                    hwnd = window._hWnd
-                    frame = capture_window(hwnd, False)       
-                    frame = np.array(frame)
-                    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-                    cv2.imshow("frame", frame)
-        except:
-            print("Fenster nicht gefunden")
-            break
+            except Exception as e:
+                print(e)
+                print("Fenster nicht gefunden")
+                break
+            if cv2.waitKey(1) & 0xFF == 113 or cv2.getWindowProperty("frame", cv2.WND_PROP_VISIBLE) < 1:
+                break
 
-        if cv2.waitKey(1) & 0xFF == 113 or cv2.getWindowProperty("frame", cv2.WND_PROP_VISIBLE) < 1:
-            break
+    else:
+        while True:
+            try:
+                windows = gw.getWindowsWithTitle(app_name)
+                if windows:
+                    window = windows[0]
+                    hwnd = window._hWnd
+                    if hwnd is not None:
+                        frame = capture_window(hwnd, False)
+                        if frame is not None:
+                            frame = np.array(frame)
+                            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+                            cv2.imshow("frame", frame)
+            except Exception as e:
+                print(e)
+                print("Fenster nicht gefunden")
+                break
+            if cv2.waitKey(1) & 0xFF == 113 or cv2.getWindowProperty("frame", cv2.WND_PROP_VISIBLE) < 1:
+                break
+
+
+
         end_time = time.time()
         elapsed_time = end_time - start_time
         sleep_time = max(1/FPS - elapsed_time, 0)
